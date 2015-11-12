@@ -293,6 +293,82 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
           case VK_PRIOR: { PostMessage( hWnd, WM_VSCROLL, SB_PAGEUP, NULL); break; };
           case VK_ADD: { zoom++; InvalidateRect( hWnd, NULL, FALSE ); break; };
           case VK_SUBTRACT: { zoom = max(zoom-1,0); InvalidateRect( hWnd, NULL, FALSE ); break; };
+          case VK_F12: 
+            {
+              char szFilename[MAX_PATH];
+              ZeroMemory( szFilename, MAX_PATH );
+
+              OPENFILENAMEA opf;
+              ZeroMemory( &opf, sizeof(OPENFILENAMEA) );
+              opf.lStructSize = sizeof(OPENFILENAMEA);
+              opf.hwndOwner = hWnd;
+              opf.lpstrFilter = "Targa files (*.tga)\0*.tga\0";
+              opf.nFilterIndex = 1L;
+              opf.lpstrFile = szFilename;
+              opf.nMaxFile = MAX_PATH;
+              opf.nMaxFileTitle = 50;
+              opf.lpstrTitle = "Save Image as";
+              opf.lpstrDefExt = ".tga";
+              opf.Flags = (OFN_OVERWRITEPROMPT | OFN_NONETWORKBUTTON) & ~OFN_ALLOWMULTISELECT;
+
+              if(GetSaveFileNameA(&opf))
+              {
+                HDC saveDC = CreateCompatibleDC(hdcSrc);
+                HBITMAP saveBmp = CreateCompatibleBitmap(hdcSrc, sz.cx * 80, sz.cy * nMaxPos);
+                SelectObject(saveDC, saveBmp);
+                BitBlt( saveDC, 0, 0, sz.cx * 80, sz.cy * nMaxPos, hdcSrc, 0, 0, SRCCOPY );
+
+                BITMAPINFO bi;
+                ZeroMemory( &bi, sizeof(BITMAPINFO) );
+                bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                bi.bmiHeader.biWidth = sz.cx * 80;
+                bi.bmiHeader.biHeight = sz.cy * nMaxPos;
+                bi.bmiHeader.biPlanes = 1;
+                bi.bmiHeader.biBitCount = 32;
+                bi.bmiHeader.biCompression = 0;
+
+                unsigned char * p = new unsigned char[ sz.cx * 80 * sz.cy * nMaxPos * 4 ];
+                GetDIBits( saveDC, saveBmp, 0, sz.cy * nMaxPos, p, &bi, NULL );
+
+                for (int i=0; i < sz.cx * 80 * sz.cy * nMaxPos; i++)
+                  p[ i * 4 + 3 ] = 0xFF;
+
+                #pragma pack(1)
+                struct _TGAHeader {
+                  unsigned char id_len;
+                  unsigned char map_t;
+                  unsigned char img_t;
+                  unsigned short map_first;
+                  unsigned short map_len;
+                  unsigned char map_entry;
+                  unsigned short x;
+                  unsigned short y;
+                  unsigned short width;
+                  unsigned short height;
+                  unsigned char depth;
+                  unsigned char alpha;
+                } tga;
+                #pragma pack(0)
+
+                ZeroMemory( &tga, sizeof(_TGAHeader) );
+
+                tga.img_t = 3; // rgba
+                tga.width  = sz.cx * 80;
+                tga.height = sz.cy * nMaxPos;
+                tga.depth = 32;
+                tga.alpha = 8;
+
+                HANDLE hObject = CreateFileA(szFilename, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, NULL, NULL);
+                DWORD bytes = 0;
+                WriteFile( hObject, &tga, sizeof(_TGAHeader), &bytes, NULL );
+                WriteFile( hObject, p, sz.cx * 80 * sz.cy * nMaxPos * 4, &bytes, NULL );
+                CloseHandle( hObject );
+                delete[] p;
+
+                DeleteObject( saveBmp );
+                DeleteDC( saveDC );
+              }
+            } break;
         }
       } break;
     case WM_VSCROLL:

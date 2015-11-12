@@ -27,3 +27,4 @@ because I lost the sources for that one.
 Keys
 ----------------
   numpad +/-  - zoom in/out
+         f12  - save image to TGA
