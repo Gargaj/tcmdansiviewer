@@ -49,26 +49,23 @@ void SetANSIColor( HDC hdc, int colorcode )
 {
   if ( colorcode == 0 )
   {
-    SetTextColor(hdc, 0xA8A8A8);
-    SetBkColor(hdc, 0);
     nFGIntensity = 0;
     nFGColor = 7;
     nBGColor = 0;
-    return;
   }
-  if ( colorcode == 1 )
+  else if ( colorcode == 1 )
   {
     nFGIntensity = 1;
   }
-  if ( colorcode == 2 )
+  else if ( colorcode == 2 )
   {
     nFGIntensity = 0;
   }
-  if ( colorcode >= 30 && colorcode <= 37 )
+  else if ( colorcode >= 30 && colorcode <= 37 )
   {
     nFGColor = colorcode % 30;
   }
-  if ( colorcode >= 40 && colorcode <= 47 )
+  else if ( colorcode >= 40 && colorcode <= 47 )
   {
     nBGColor = colorcode % 40;
   }
