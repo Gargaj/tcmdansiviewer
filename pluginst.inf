@@ -1,0 +1,6 @@
+[plugininstall]
+description=ANSI Viewer Lister plugin for Total Commander
+type=wlx
+file=tcmdansiviewer.wlx
+defaultdir=Ansi
+defaultextension=ans
