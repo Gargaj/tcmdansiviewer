@@ -3,7 +3,10 @@ ANSI Viewer Lister plugin for Total Commander
 
 Coded by Gargaj / Conspiracy (http://gargaj.umlaut.hu)
 
-New versions and sourcecode at:
+New versions at:
+  https://github.com/Gargaj/tcmdansiviewer/releases
+
+Sourcecode at:
   https://github.com/Gargaj/tcmdansiviewer
 
 Test material:
