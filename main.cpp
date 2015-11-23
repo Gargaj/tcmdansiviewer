@@ -202,6 +202,16 @@ void sRenderImage(HDC hdc, unsigned char *pBuffer, int nBufferCount, int *pnXPos
             pushedX = *pnXPos;
             pushedY = *pnYPos;
           } break;
+        case 't': // 24 bit ansi (http://picoe.ca/2014/03/07/24-bit-ansi/)
+          {
+            int fgbg = 0, r = 0, g = 0, b = 0;
+            sscanf(pTempBuf, "%d;%d;%d;%d", &fgbg, &r, &g, &b);
+            if (fgbg == 0)
+              SetBkColor(hdc, RGB(r,g,b));
+            else
+              SetTextColor(hdc, RGB(r,g,b));
+
+          } break;
         case 'u': // pop position
           {
             *pnXPos = pushedX;
