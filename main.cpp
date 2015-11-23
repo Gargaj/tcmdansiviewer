@@ -442,6 +442,72 @@ HWND __stdcall ListLoad(HWND hWndParent, char * lpFileName, int ShowFlags)
 
   hObject = NULL;
 
+  if (nSize > 128)
+  {
+#pragma pack(1)
+    typedef enum 
+    {
+      SAUCE_DATATYPE_NONE = 0,
+      SAUCE_DATATYPE_CHARACTER,
+      SAUCE_DATATYPE_BITMAP,
+      SAUCE_DATATYPE_VECTOR,
+      SAUCE_DATATYPE_AUDIO,
+      SAUCE_DATATYPE_BINARYTEXT,
+      SAUCE_DATATYPE_XBIN,
+      SAUCE_DATATYPE_ARCHIVE,
+      SAUCE_DATATYPE_EXECUTABLE
+    } SAUCE_DATATYPE;
+
+#define SAUCE_FILETYPE_CHARACTER_ASCII      0
+#define SAUCE_FILETYPE_CHARACTER_ANSI       1
+#define SAUCE_FILETYPE_CHARACTER_ANSIMATION 2
+#define SAUCE_FILETYPE_CHARACTER_RIPSCRIPT  3
+#define SAUCE_FILETYPE_CHARACTER_PCBOARD    4
+#define SAUCE_FILETYPE_CHARACTER_AVATAR     5
+#define SAUCE_FILETYPE_CHARACTER_HTML       6
+#define SAUCE_FILETYPE_CHARACTER_SOURCE     7
+#define SAUCE_FILETYPE_CHARACTER_TUNDRADRAW 8
+
+    typedef struct 
+    {
+      char szSignature[5];
+      char szVersion[2];
+      char szTitle[35];
+      char szAuthor[20];
+      char szGroup[20];
+      char szDate[8];
+      unsigned int nFilesize;
+      unsigned char nDataType;
+      unsigned char nFileType;
+      unsigned short nInfo1;
+      unsigned short nInfo2;
+      unsigned short nInfo3;
+      unsigned short nInfo4;
+      unsigned char nComments;
+      unsigned char nFlags;
+      char pPadding[22];
+    } SAUCE_HEADER;
+
+    SAUCE_HEADER * sauceHeader = (SAUCE_HEADER *)(lpBuffer + nSize - 128);
+    if (strncmp(sauceHeader->szSignature,"SAUCE",5) == 0)
+    {
+      if (sauceHeader->nDataType == SAUCE_DATATYPE_CHARACTER)
+      {
+        if (sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_ASCII
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_ANSI
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_ANSIMATION
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_PCBOARD
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_AVATAR)
+        {
+          if (sauceHeader->nInfo1 > 0)
+            nCharWidth = sauceHeader->nInfo1;
+        }
+      }
+    }
+#pragma pack()
+  }
+
+
   WNDCLASSA WndClass;
   WndClass.style = 32;
   WndClass.lpfnWndProc = WndProc;
