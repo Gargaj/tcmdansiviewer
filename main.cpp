@@ -22,6 +22,7 @@ SIZE sz = { 0, 0 };
 int zoom = 1;
 int nFontSize = 0;
 char szFontName[200] = "Fixedsys";
+int nCharWidth = 80;
 
 BOOL APIENTRY DllMain( HANDLE hModule, DWORD ul_reason_for_call, LPVOID lpReserved )
 {
@@ -112,6 +113,7 @@ void sRenderImage(HDC hdc, unsigned char *pBuffer, int nBufferCount, int *pnXPos
             if ( strlen(pTempBuf) )
               sscanf(pTempBuf, "%d", &lines);
             *pnXPos += lines;
+            *pnXPos = min( nCharWidth - 1, *pnXPos );
           } break;
         case 'D': // move left X lines
           {
@@ -154,14 +156,14 @@ void sRenderImage(HDC hdc, unsigned char *pBuffer, int nBufferCount, int *pnXPos
               {
                 rc.left = 0;
                 rc.top = 0;
-                rc.right = 80 * sz.cx;
+                rc.right = nCharWidth * sz.cx;
                 rc.bottom = sz.cy * *pnYPos;
               }
               else if ( pTempBuf[0] == '2' ) // clear whole buffer
               {
                 rc.top = 0;
                 rc.left = 0;
-                rc.right = 80 * sz.cx;
+                rc.right = nCharWidth * sz.cx;
                 rc.bottom = sz.cy * nMaxPos;
                 *pnYPos = 0;
                 *pnXPos = 0;
@@ -171,7 +173,7 @@ void sRenderImage(HDC hdc, unsigned char *pBuffer, int nBufferCount, int *pnXPos
             {
               rc.left = 0;
               rc.top = sz.cy * *pnYPos;
-              rc.right = 80 * sz.cx;
+              rc.right = nCharWidth * sz.cx;
               rc.bottom = sz.cy * nMaxPos;
             }
             if ( hdc )
@@ -196,6 +198,16 @@ void sRenderImage(HDC hdc, unsigned char *pBuffer, int nBufferCount, int *pnXPos
           {
             pushedX = *pnXPos;
             pushedY = *pnYPos;
+          } break;
+        case 't': // 24 bit ansi (http://picoe.ca/2014/03/07/24-bit-ansi/)
+          {
+            int fgbg = 0, r = 0, g = 0, b = 0;
+            sscanf(pTempBuf, "%d;%d;%d;%d", &fgbg, &r, &g, &b);
+            if (fgbg == 0)
+              SetBkColor(hdc, RGB(r,g,b));
+            else
+              SetTextColor(hdc, RGB(r,g,b));
+
           } break;
         case 'u': // pop position
           {
@@ -235,9 +247,9 @@ void sRenderImage(HDC hdc, unsigned char *pBuffer, int nBufferCount, int *pnXPos
         (*pnXPos)++;
       }
     }
-    while ( *pnXPos >= 80 )
+    while ( *pnXPos >= nCharWidth )
     {
-      (*pnXPos) -= 80;
+      (*pnXPos) -= nCharWidth;
       (*pnYPos)++;
     }
   }
@@ -276,7 +288,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
         else
         {
-          StretchBlt( ps.hdc, 0, 0, zoom * sz.cx * 80, zoom * sz.cx * (nMaxPos - nPos), hdcSrc, 0, nPos * sz.cy, sz.cx * 80, sz.cx * (nMaxPos - nPos), SRCCOPY );
+          StretchBlt( ps.hdc, 0, 0, zoom * sz.cx * nCharWidth, zoom * sz.cx * (nMaxPos - nPos), hdcSrc, 0, nPos * sz.cy, sz.cx * nCharWidth, sz.cx * (nMaxPos - nPos), SRCCOPY );
         }
         EndPaint( hWnd, &ps );
       } break;
@@ -311,23 +323,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
               if(GetSaveFileNameA(&opf))
               {
                 HDC saveDC = CreateCompatibleDC(hdcSrc);
-                HBITMAP saveBmp = CreateCompatibleBitmap(hdcSrc, sz.cx * 80, sz.cy * nMaxPos);
+                HBITMAP saveBmp = CreateCompatibleBitmap(hdcSrc, sz.cx * nCharWidth, sz.cy * nMaxPos);
                 SelectObject(saveDC, saveBmp);
-                BitBlt( saveDC, 0, 0, sz.cx * 80, sz.cy * nMaxPos, hdcSrc, 0, 0, SRCCOPY );
+                BitBlt( saveDC, 0, 0, sz.cx * nCharWidth, sz.cy * nMaxPos, hdcSrc, 0, 0, SRCCOPY );
 
                 BITMAPINFO bi;
                 ZeroMemory( &bi, sizeof(BITMAPINFO) );
                 bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                bi.bmiHeader.biWidth = sz.cx * 80;
+                bi.bmiHeader.biWidth = sz.cx * nCharWidth;
                 bi.bmiHeader.biHeight = sz.cy * nMaxPos;
                 bi.bmiHeader.biPlanes = 1;
                 bi.bmiHeader.biBitCount = 32;
                 bi.bmiHeader.biCompression = 0;
 
-                unsigned char * p = new unsigned char[ sz.cx * 80 * sz.cy * nMaxPos * 4 ];
+                unsigned char * p = new unsigned char[ sz.cx * nCharWidth * sz.cy * nMaxPos * 4 ];
                 GetDIBits( saveDC, saveBmp, 0, sz.cy * nMaxPos, p, &bi, NULL );
 
-                for (int i=0; i < sz.cx * 80 * sz.cy * nMaxPos; i++)
+                for (int i=0; i < sz.cx * nCharWidth * sz.cy * nMaxPos; i++)
                   p[ i * 4 + 3 ] = 0xFF;
 
                 #pragma pack(1)
@@ -350,7 +362,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 ZeroMemory( &tga, sizeof(_TGAHeader) );
 
                 tga.img_t = 3; // rgba
-                tga.width  = sz.cx * 80;
+                tga.width  = sz.cx * nCharWidth;
                 tga.height = sz.cy * nMaxPos;
                 tga.depth = 32;
                 tga.alpha = 8;
@@ -358,7 +370,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 HANDLE hObject = CreateFileA(szFilename, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, NULL, NULL);
                 DWORD bytes = 0;
                 WriteFile( hObject, &tga, sizeof(_TGAHeader), &bytes, NULL );
-                WriteFile( hObject, p, sz.cx * 80 * sz.cy * nMaxPos * 4, &bytes, NULL );
+                WriteFile( hObject, p, sz.cx * nCharWidth * sz.cy * nMaxPos * 4, &bytes, NULL );
                 CloseHandle( hObject );
                 delete[] p;
 
@@ -427,6 +439,72 @@ HWND __stdcall ListLoad(HWND hWndParent, char * lpFileName, int ShowFlags)
 
   hObject = NULL;
 
+  if (nSize > 128)
+  {
+#pragma pack(1)
+    typedef enum 
+    {
+      SAUCE_DATATYPE_NONE = 0,
+      SAUCE_DATATYPE_CHARACTER,
+      SAUCE_DATATYPE_BITMAP,
+      SAUCE_DATATYPE_VECTOR,
+      SAUCE_DATATYPE_AUDIO,
+      SAUCE_DATATYPE_BINARYTEXT,
+      SAUCE_DATATYPE_XBIN,
+      SAUCE_DATATYPE_ARCHIVE,
+      SAUCE_DATATYPE_EXECUTABLE
+    } SAUCE_DATATYPE;
+
+#define SAUCE_FILETYPE_CHARACTER_ASCII      0
+#define SAUCE_FILETYPE_CHARACTER_ANSI       1
+#define SAUCE_FILETYPE_CHARACTER_ANSIMATION 2
+#define SAUCE_FILETYPE_CHARACTER_RIPSCRIPT  3
+#define SAUCE_FILETYPE_CHARACTER_PCBOARD    4
+#define SAUCE_FILETYPE_CHARACTER_AVATAR     5
+#define SAUCE_FILETYPE_CHARACTER_HTML       6
+#define SAUCE_FILETYPE_CHARACTER_SOURCE     7
+#define SAUCE_FILETYPE_CHARACTER_TUNDRADRAW 8
+
+    typedef struct 
+    {
+      char szSignature[5];
+      char szVersion[2];
+      char szTitle[35];
+      char szAuthor[20];
+      char szGroup[20];
+      char szDate[8];
+      unsigned int nFilesize;
+      unsigned char nDataType;
+      unsigned char nFileType;
+      unsigned short nInfo1;
+      unsigned short nInfo2;
+      unsigned short nInfo3;
+      unsigned short nInfo4;
+      unsigned char nComments;
+      unsigned char nFlags;
+      char pPadding[22];
+    } SAUCE_HEADER;
+
+    SAUCE_HEADER * sauceHeader = (SAUCE_HEADER *)(lpBuffer + nSize - 128);
+    if (strncmp(sauceHeader->szSignature,"SAUCE",5) == 0)
+    {
+      if (sauceHeader->nDataType == SAUCE_DATATYPE_CHARACTER)
+      {
+        if (sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_ASCII
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_ANSI
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_ANSIMATION
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_PCBOARD
+          || sauceHeader->nFileType == SAUCE_FILETYPE_CHARACTER_AVATAR)
+        {
+          if (sauceHeader->nInfo1 > 0)
+            nCharWidth = sauceHeader->nInfo1;
+        }
+      }
+    }
+#pragma pack()
+  }
+
+
   WNDCLASSA WndClass;
   WndClass.style = 32;
   WndClass.lpfnWndProc = WndProc;
@@ -471,7 +549,7 @@ HWND __stdcall ListLoad(HWND hWndParent, char * lpFileName, int ShowFlags)
   nPos = 0;
   nMaxPos = sizeY;
   SetScrollRange(hWnd, 1, 0, sizeY, 1);
-  bmp = CreateCompatibleBitmap(hdc, 80 * sz.cx, sz.cy * sizeY);
+  bmp = CreateCompatibleBitmap(hdc, nCharWidth * sz.cx, sz.cy * sizeY);
   SelectObject(hdcSrc, (HGDIOBJ)bmp);
   SelectObject(hdcSrc, h);
   for ( int i = 0; i < 16; i++ )
