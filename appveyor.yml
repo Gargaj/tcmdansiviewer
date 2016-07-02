@@ -1,0 +1,13 @@
+version: '{build}'
+configuration: Release
+
+clone_depth: 50
+
+platform: 
+  - Win32
+  - x64
+
+build:
+  project: tcmdansiviewer.sln
+  parallel: true
+  verbosity: minimal
