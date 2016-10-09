@@ -19,9 +19,12 @@ Test material:
 
 Comparison basis was ACiDDraw v1.25r and PNG renders
 
+Uses stb_image_write.h by Sean Barrett et al:
+  https://github.com/nothings/stb/blob/master/stb_image_write.h
+
 
 
 Keys
 ----------------
-  F12         - dump picture to .TGA file
+  F12         - dump picture to image file
   numpad +/-  - zoom in/out

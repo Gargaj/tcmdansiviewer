@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <shlwapi.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #ifdef __cplusplus
 extern "C" {  
 #endif
@@ -311,13 +314,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
               ZeroMemory( &opf, sizeof(OPENFILENAMEA) );
               opf.lStructSize = sizeof(OPENFILENAMEA);
               opf.hwndOwner = hWnd;
-              opf.lpstrFilter = "Targa files (*.tga)\0*.tga\0";
+              opf.lpstrFilter = 
+                "Portable Network Graphic files (*.png)\0*.png\0"
+                "Windows Bitmap files (*.bmp)\0*.bmp\0"
+                "Targa files (*.tga)\0*.tga\0";
               opf.nFilterIndex = 1L;
               opf.lpstrFile = szFilename;
               opf.nMaxFile = MAX_PATH;
               opf.nMaxFileTitle = 50;
               opf.lpstrTitle = "Save Image as";
-              opf.lpstrDefExt = ".tga";
+              opf.lpstrDefExt = ".png";
               opf.Flags = (OFN_OVERWRITEPROMPT | OFN_NONETWORKBUTTON) & ~OFN_ALLOWMULTISELECT;
 
               if(GetSaveFileNameA(&opf))
@@ -336,42 +342,39 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 bi.bmiHeader.biBitCount = 32;
                 bi.bmiHeader.biCompression = 0;
 
-                unsigned char * p = new unsigned char[ sz.cx * nCharWidth * sz.cy * nMaxPos * 4 ];
-                GetDIBits( saveDC, saveBmp, 0, sz.cy * nMaxPos, p, &bi, NULL );
+                unsigned int w = sz.cx * nCharWidth;
+                unsigned int h = sz.cy * nMaxPos;
 
-                for (int i=0; i < sz.cx * nCharWidth * sz.cy * nMaxPos; i++)
+                unsigned char * p = new unsigned char[ w * h * 4 ];
+                GetDIBits( saveDC, saveBmp, 0, h, p, &bi, NULL );
+
+                for (int i=0; i < w * h; i++)
+                {
+                  unsigned char t = p[ i * 4 + 0 ];
+                  p[ i * 4 + 0 ] = p[ i * 4 + 2 ];
+                  p[ i * 4 + 2 ] = t;
                   p[ i * 4 + 3 ] = 0xFF;
+                }
 
-                #pragma pack(1)
-                struct _TGAHeader {
-                  unsigned char id_len;
-                  unsigned char map_t;
-                  unsigned char img_t;
-                  unsigned short map_first;
-                  unsigned short map_len;
-                  unsigned char map_entry;
-                  unsigned short x;
-                  unsigned short y;
-                  unsigned short width;
-                  unsigned short height;
-                  unsigned char depth;
-                  unsigned char alpha;
-                } tga;
-                #pragma pack(0)
+                unsigned char * flip = new unsigned char[ w * h * 4 ];
 
-                ZeroMemory( &tga, sizeof(_TGAHeader) );
+                unsigned char * src = p + w * h * 4 - w * 4;
+                unsigned char * dst = flip;
+                for (int y=0; y < h; y++)
+                {
+                  CopyMemory( dst, src, w * 4 );
+                  src -= w * 4;
+                  dst += w * 4;
+                }
 
-                tga.img_t = 3; // rgba
-                tga.width  = sz.cx * nCharWidth;
-                tga.height = sz.cy * nMaxPos;
-                tga.depth = 32;
-                tga.alpha = 8;
+                switch(opf.nFilterIndex)
+                {
+                  case 1: stbi_write_png(szFilename, w, h, 4, flip, 4 * w); break;
+                  case 2: stbi_write_bmp(szFilename, w, h, 4, flip); break;
+                  case 3: stbi_write_tga(szFilename, w, h, 4, flip); break;
+                }
 
-                HANDLE hObject = CreateFileA(szFilename, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, NULL, NULL);
-                DWORD bytes = 0;
-                WriteFile( hObject, &tga, sizeof(_TGAHeader), &bytes, NULL );
-                WriteFile( hObject, p, sz.cx * nCharWidth * sz.cy * nMaxPos * 4, &bytes, NULL );
-                CloseHandle( hObject );
+                delete[] flip;
                 delete[] p;
 
                 DeleteObject( saveBmp );

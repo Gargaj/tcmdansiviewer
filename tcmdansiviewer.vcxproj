@@ -73,6 +73,7 @@
     <TargetName>$(ProjectName)</TargetName>
     <TargetExt>.wlx64</TargetExt>
     <LibraryPath>c:\Program Files\Microsoft SDKs\Windows\v7.1A\Lib\x64\;c:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\x64\;$(ProgramFiles)\Microsoft SDKs\Windows\v7.1A\Lib\x64\;$(LibraryPath)</LibraryPath>
+    <OutDir>c:\totalcmd\Plugins\wlx\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -158,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="listplug.h" />
+    <ClInclude Include="stb_image_write.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
